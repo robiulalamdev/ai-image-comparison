@@ -1,0 +1,8 @@
+venv
+.venv
+uploads
+results
+logs
+cache
+api.log
+checkpoints
