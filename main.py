@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Form
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -261,6 +261,19 @@ class AdvancedImageComparisonAPI:
                     .input-file:hover {
                         border-color: #9ca3af;
                     }
+                    .file-info {
+                        margin-top: 8px;
+                        font-size: 0.875rem;
+                        color: #6b7280;
+                    }
+                    .file-size-warning {
+                        color: #f59e0b;
+                        font-weight: 500;
+                    }
+                    .file-size-error {
+                        color: #ef4444;
+                        font-weight: 500;
+                    }
                     .image-preview {
                         max-width: 100%;
                         height: auto;
@@ -284,9 +297,55 @@ class AdvancedImageComparisonAPI:
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
+                    /* Add custom popup styles */
+                    .custom-popup {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 15px 25px;
+                        border-radius: 8px;
+                        color: white;
+                        font-weight: 500;
+                        z-index: 1000;
+                        opacity: 0;
+                        transform: translateX(100%);
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    }
+                    .custom-popup.show {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                    .custom-popup.error {
+                        background-color: #ef4444;
+                        border-left: 4px solid #dc2626;
+                    }
+                    .custom-popup.warning {
+                        background-color: #f59e0b;
+                        border-left: 4px solid #d97706;
+                    }
+                    .custom-popup.success {
+                        background-color: #10b981;
+                        border-left: 4px solid #059669;
+                    }
+                    .custom-popup .close-btn {
+                        position: absolute;
+                        right: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        background: none;
+                        border: none;
+                        color: white;
+                        cursor: pointer;
+                        font-size: 18px;
+                        padding: 0 5px;
+                    }
                 </style>
             </head>
             <body>
+                <!-- Add popup container -->
+                <div id="popupContainer"></div>
+                
                 <div class="container">
                     <h1 class="text-3xl font-bold text-gray-800 mb-6">Advanced AI Image Comparison Tool</h1>
                     <p class="text-gray-600 mb-8">Upload two images (reference and comparison) to detect and highlight differences.</p>
@@ -295,11 +354,13 @@ class AdvancedImageComparisonAPI:
                         <div>
                             <label for="image1" class="block text-lg font-medium text-gray-700 mb-2">Reference Image (Image A):</label>
                             <input type="file" id="image1" name="image1" accept="image/*" required class="input-file">
+                            <div id="fileInfo1" class="file-info"></div>
                             <img id="preview1" class="image-preview hidden" src="#" alt="Image A Preview">
                         </div>
                         <div>
                             <label for="image2" class="block text-lg font-medium text-gray-700 mb-2">Comparison Image (Image B):</label>
                             <input type="file" id="image2" name="image2" accept="image/*" required class="input-file">
+                            <div id="fileInfo2" class="file-info"></div>
                             <img id="preview2" class="image-preview hidden" src="#" alt="Image B Preview">
                         </div>
                         <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
@@ -327,8 +388,8 @@ class AdvancedImageComparisonAPI:
                                 <label for="detect_method" class="block text-lg font-medium text-gray-700 mb-2">Detection Method:</label>
                                 <select id="detect_method" name="detect_method" 
                                     class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="Advance">Advanced</option>
-                                    <option value="Basic">Basic</option>
+                                    <option value="Advance">Advanced (ChangeFormer)</option>
+                                    <option value="SSIM">SSIM (Structural Similarity)</option>
                                 </select>
                             </div>
                         </div>
@@ -351,16 +412,78 @@ class AdvancedImageComparisonAPI:
                 </div>
 
                 <script>
-                    function previewImage(event, previewId) {
+                    // Add popup management functions
+                    function showPopup(message, type = 'error', duration = 5000) {
+                        const popupContainer = document.getElementById('popupContainer');
+                        const popup = document.createElement('div');
+                        popup.className = `custom-popup ${type}`;
+                        popup.innerHTML = `
+                            ${message}
+                            <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        `;
+                        popupContainer.appendChild(popup);
+                        
+                        // Trigger animation
+                        setTimeout(() => popup.classList.add('show'), 10);
+                        
+                        // Auto remove after duration
+                        if (duration > 0) {
+                            setTimeout(() => {
+                                popup.classList.remove('show');
+                                setTimeout(() => popup.remove(), 300);
+                            }, duration);
+                        }
+                    }
+
+                    // Add file size formatting function
+                    function formatFileSize(bytes) {
+                        if (bytes === 0) return '0 Bytes';
+                        const k = 1024;
+                        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                    }
+
+                    // Add file validation function
+                    function validateFile(file, fileInfoId) {
+                        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+                        const fileInfo = document.getElementById(fileInfoId);
+                        const fileSize = file.size;
+                        const formattedSize = formatFileSize(fileSize);
+                        
+                        // Clear previous classes
+                        fileInfo.classList.remove('file-size-warning', 'file-size-error');
+                        
+                        if (fileSize > maxSize) {
+                            fileInfo.innerHTML = `<span class="file-size-error">File size: ${formattedSize} (exceeds 50MB limit)</span>`;
+                            return false;
+                        } else if (fileSize > (maxSize * 0.8)) { // Warning at 80% of max size
+                            fileInfo.innerHTML = `<span class="file-size-warning">File size: ${formattedSize} (large file)</span>`;
+                            return true;
+                        } else {
+                            fileInfo.innerHTML = `File size: ${formattedSize}`;
+                            return true;
+                        }
+                    }
+
+                    function previewImage(event, previewId, fileInfoId) {
                         const [file] = event.target.files;
                         if (file) {
+                            // Validate file size
+                            if (!validateFile(file, fileInfoId)) {
+                                showPopup(`File size exceeds 50MB limit. Please choose a smaller image.`, 'warning');
+                                event.target.value = ''; // Clear the file input
+                                document.getElementById(previewId).classList.add('hidden');
+                                return;
+                            }
+                            
                             document.getElementById(previewId).src = URL.createObjectURL(file);
                             document.getElementById(previewId).classList.remove('hidden');
                         }
                     }
 
-                    document.getElementById('image1').addEventListener('change', (e) => previewImage(e, 'preview1'));
-                    document.getElementById('image2').addEventListener('change', (e) => previewImage(e, 'preview2'));
+                    document.getElementById('image1').addEventListener('change', (e) => previewImage(e, 'preview1', 'fileInfo1'));
+                    document.getElementById('image2').addEventListener('change', (e) => previewImage(e, 'preview2', 'fileInfo2'));
 
                     document.getElementById('uploadForm').addEventListener('submit', async function(event) {
                         event.preventDefault();
@@ -371,6 +494,29 @@ class AdvancedImageComparisonAPI:
                         const minArea = document.getElementById('min_area').value;
                         const alignmentMethod = document.getElementById('alignment_method').value;
                         const detectMethod = document.getElementById('detect_method').value;
+
+                        // Validate files before upload
+                        if (!image1File || !image2File) {
+                            showPopup('Please select both images.', 'error');
+                            return;
+                        }
+
+                        // Check file sizes before upload
+                        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+                        let hasError = false;
+
+                        if (image1File.size > maxSize) {
+                            showPopup('Reference image size exceeds 50MB limit. Please choose a smaller image.', 'warning');
+                            hasError = true;
+                        }
+                        if (image2File.size > maxSize) {
+                            showPopup('Comparison image size exceeds 50MB limit. Please choose a smaller image.', 'warning');
+                            hasError = true;
+                        }
+
+                        if (hasError) {
+                            return;
+                        }
 
                         const resultContainer = document.getElementById('resultContainer');
                         const resultImage = document.getElementById('resultImage');
@@ -385,15 +531,6 @@ class AdvancedImageComparisonAPI:
                         buttonText.textContent = 'Processing...';
                         spinner.classList.remove('hidden');
                         document.querySelector('button[type="submit"]').disabled = true;
-
-                        if (!image1File || !image2File) {
-                            errorMessage.textContent = 'Please select both images.';
-                            errorMessage.classList.remove('hidden');
-                            buttonText.textContent = 'Compare Images';
-                            spinner.classList.add('hidden');
-                            document.querySelector('button[type="submit"]').disabled = false;
-                            return;
-                        }
 
                         const formData = new FormData();
                         formData.append('reference_image', image1File);
@@ -445,6 +582,9 @@ class AdvancedImageComparisonAPI:
                                         </div>
                                     `;
                                     
+                                    // Show success popup
+                                    showPopup(`Comparison completed successfully! ${matchPercentage}% similarity.`, 'success');
+                                    
                                     // Add other metadata
                                     for (const key in metadata) {
                                         if (metadata.hasOwnProperty(key) && key !== 'isMatched' && key !== 'matching_percentage') {
@@ -467,8 +607,7 @@ class AdvancedImageComparisonAPI:
                             }
 
                         } catch (error) {
-                            errorMessage.textContent = 'Error: ' + error.message;
-                            errorMessage.classList.remove('hidden');
+                            showPopup('Error: ' + error.message, 'error');
                         } finally {
                             buttonText.textContent = 'Compare Images';
                             spinner.classList.add('hidden');
@@ -497,22 +636,21 @@ class AdvancedImageComparisonAPI:
         async def compare_images_api(
             reference_image: UploadFile = File(...),
             comparison_image: UploadFile = File(...),
-            sensitivity: float = 0.5,
-            min_area: int = 50,
-            alignment_method: str = "superglue", # "superglue" or "basic"
-            detect_method: str = "Basic" # "Advance" or "Basic"
+            sensitivity: float = Form(0.5),
+            min_area: int = Form(50),
+            alignment_method: str = Form("superglue"), # "superglue" or "basic"
+            detect_method: str = Form("Advance") # "Advance", "SSIM"
         ):
             """Advanced image comparison with multiple options"""
-
 
             print(f"Detect Method: {detect_method}")
             
             try:
                 # Validate inputs
                 if not self.validate_image_file(reference_image):
-                    raise HTTPException(status_code=400, detail="Invalid reference image format.")
+                    raise HTTPException(status_code=400, detail="Invalid reference image format or size exceeds 50MB limit.")
                 if not self.validate_image_file(comparison_image):
-                    raise HTTPException(status_code=400, detail="Invalid comparison image format.")
+                    raise HTTPException(status_code=400, detail="Invalid comparison image format or size exceeds 50MB limit.")
                 
                 # Generate unique request ID for caching
                 request_id = await self.generate_request_id(reference_image, comparison_image, sensitivity, min_area, alignment_method)
@@ -571,39 +709,31 @@ class AdvancedImageComparisonAPI:
                         ref_processed, comp_processed
                     )
                 
-                # Detect changes
-                logger.info("Detecting changes with advanced AI")
-                if self.changeformer:
+                # Detect changes based on selected method
+                logger.info(f"Detecting changes using {detect_method} method")
+                if detect_method == "Advance" and self.changeformer:
                     logger.info("Using ChangeFormer for change detection")
                     result_img_aligned, change_mask_aligned, confidence_scores = await self.detect_changes_advanced(
                         ref_aligned, comp_aligned, sensitivity, min_area
                     )
+                elif detect_method == "SSIM":
+                    logger.info("Using SSIM for change detection")
+                    result_img_aligned, change_mask_aligned, confidence_scores = self.detector.detect_changes_ssim(
+                        ref_aligned, comp_aligned, sensitivity, min_area
+                    )
                 else:
                     logger.info("Using Basic Detection for change detection")
-                    # Fallback to basic detection if ChangeFormer is not loaded
-                    if detect_method == "Advance":
-                        result_img_aligned, change_mask_aligned, confidence_scores = self.detector.detect_changes_ssim(
-                            ref_aligned, comp_aligned, sensitivity, min_area
-                        )
-                    else:
-                        result_img_aligned, change_mask_aligned, confidence_scores = self.detector.detect_changes_basic(
-                            ref_aligned, comp_aligned, sensitivity, min_area
-                        )
+                    result_img_aligned, change_mask_aligned, confidence_scores = self.detector.detect_changes_basic(
+                        ref_aligned, comp_aligned, sensitivity, min_area
+                    )
 
-
-                    
-
-                
                 # Resize the final result image and mask back to the original reference image's size
-                # This ensures the output image has the same dimensions as the original reference image
                 result_img_final = cv2.resize(result_img_aligned, original_ref_size, interpolation=cv2.INTER_LINEAR)
                 change_mask_final = cv2.resize(change_mask_aligned, original_ref_size, interpolation=cv2.INTER_NEAREST)
 
-                # Redraw differences on the *original* reference image using the *final* mask
-                # This ensures the output image is based on the original reference, not the resized/aligned one
-                result_pil_image = Image.fromarray(cv2.cvtColor(ref_img_cv, cv2.COLOR_BGR2RGB))
+                # Redraw differences on the original reference image using the final mask
+                result_pil_image = Image.fromarray(cv2.cvtColor(comp_img_cv, cv2.COLOR_BGR2RGB))
                 result_pil_image = self.image_processor.draw_differences(result_pil_image, change_mask_final, min_area)
-
 
                 # Save result
                 result_path = Path("results") / f"result_{request_id}.jpg"
@@ -614,7 +744,7 @@ class AdvancedImageComparisonAPI:
                     "alignment_confidence": float(alignment_confidence),
                     "change_confidence": confidence_scores,
                     "processing_time": time.time(),
-                    "method_used": alignment_method,
+                    "method_used": f"{alignment_method} + {detect_method}",
                     "device_used": str(self.device),
                     "sensitivity": sensitivity,
                     "min_area": min_area,
@@ -808,11 +938,28 @@ class AdvancedImageComparisonAPI:
             return self.detector.detect_changes_basic(img1, img2, sensitivity, min_area)
     
     def validate_image_file(self, file: UploadFile) -> bool:
-        """Validate uploaded image file by content type."""
+        """Validate uploaded image file by content type and size."""
         allowed_types = ["image/jpeg", "image/png", "image/jpg"]
-        return file.content_type in allowed_types
-
-
+        max_size = 50 * 1024 * 1024  # 50MB in bytes
+        
+        # Check content type
+        if file.content_type not in allowed_types:
+            return False
+            
+        # Check file size
+        file_size = 0
+        chunk_size = 1024 * 1024  # 1MB chunks
+        
+        while True:
+            chunk = file.file.read(chunk_size)
+            if not chunk:
+                break
+            file_size += len(chunk)
+            
+        # Reset file pointer
+        file.file.seek(0)
+        
+        return file_size <= max_size
 
     async def generate_request_id(self, file1: UploadFile, file2: UploadFile, sensitivity: float, min_area: int, alignment_method: str) -> str:
         """Generate unique request ID based on file contents and parameters."""
