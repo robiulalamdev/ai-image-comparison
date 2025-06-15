@@ -58,7 +58,7 @@ class Settings:
             'drop_path_rate': 0.1,
             'norm_layer': 'nn.LayerNorm', # Use string to avoid circular import if nn is not available yet
             'patch_norm': True,
-            'use_checkpoint': False,
+            'use_checkpoint': True,
             'decoder_embed_dim': 256,
             'decoder_depths': [2, 2, 2, 2],
             'decoder_num_heads': [4, 8, 16, 32],

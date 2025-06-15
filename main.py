@@ -305,23 +305,29 @@ class AdvancedImageComparisonAPI:
                         <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
                             <div class="flex-1">
                                 <label for="sensitivity" class="block text-lg font-medium text-gray-700 mb-2">Sensitivity (0.0 - 1.0):</label>
-                                <input type="number" id="sensitivity" name="sensitivity" value="0.5" step="0.01" min="0" max="1" class="w-full p-2 border border-gray-300 rounded-md">
+                                <input type="range" id="sensitivity" name="sensitivity" value="0.5" min="0" max="1" step="0.01" 
+                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    oninput="document.getElementById('sensitivityValue').textContent = this.value">
+                                <div class="text-sm text-gray-600 text-center" id="sensitivityValue">0.5</div>
                             </div>
                             <div class="flex-1">
                                 <label for="min_area" class="block text-lg font-medium text-gray-700 mb-2">Min Change Area (pixels):</label>
-                                <input type="number" id="min_area" name="min_area" value="100" step="1" min="0" class="w-full p-2 border border-gray-300 rounded-md">
+                                <input type="number" id="min_area" name="min_area" value="100" min="0" step="1" 
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             </div>
                             <div class="flex-1">
                                 <label for="alignment_method" class="block text-lg font-medium text-gray-700 mb-2">Alignment Method:</label>
-                                <select id="alignment_method" name="alignment_method" class="w-full p-2 border border-gray-300 rounded-md">
+                                <select id="alignment_method" name="alignment_method" 
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <option value="superglue">SuperGlue (Advanced)</option>
                                     <option value="basic">Basic (ORB/SIFT)</option>
                                 </select>
                             </div>
                             <div class="flex-1">
                                 <label for="detect_method" class="block text-lg font-medium text-gray-700 mb-2">Detection Method:</label>
-                                <select id="detect_method" name="detect_method" class="w-full p-2 border border-gray-300 rounded-md">
-                                    <option value="Advance">Advance</option>
+                                <select id="detect_method" name="detect_method" 
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="Advance">Advanced</option>
                                     <option value="Basic">Basic</option>
                                 </select>
                             </div>
@@ -334,6 +340,9 @@ class AdvancedImageComparisonAPI:
 
                     <div id="resultContainer" class="mt-8 hidden">
                         <h2 class="text-2xl font-semibold text-gray-800 mb-4">Comparison Result:</h2>
+                        <div class="mb-4 p-4 rounded-lg" id="matchStatus">
+                            <!-- Match status will be inserted here -->
+                        </div>
                         <img id="resultImage" class="image-preview" src="#" alt="Comparison Result">
                         <div id="metadata" class="mt-4 text-left text-gray-700 text-sm"></div>
                     </div>
@@ -416,8 +425,29 @@ class AdvancedImageComparisonAPI:
                                 try {
                                     const metadata = JSON.parse(metadataHeader);
                                     let metadataHtml = '<strong>Comparison Details:</strong><br>';
+                                    
+                                    // Add match status with beautiful styling
+                                    const matchStatus = document.getElementById('matchStatus');
+                                    const isMatched = metadata.isMatched;
+                                    const matchPercentage = metadata.matching_percentage.toFixed(2);
+                                    
+                                    matchStatus.innerHTML = `
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <div class="text-2xl font-bold ${isMatched ? 'text-green-600' : 'text-red-600'}">
+                                                ${isMatched ? '✓' : '✗'}
+                                            </div>
+                                            <div class="text-xl ${isMatched ? 'text-green-600' : 'text-red-600'}">
+                                                ${isMatched ? 'Images Match!' : 'Images Do Not Match'}
+                                            </div>
+                                            <div class="text-lg text-gray-600">
+                                                (${matchPercentage}% similarity)
+                                            </div>
+                                        </div>
+                                    `;
+                                    
+                                    // Add other metadata
                                     for (const key in metadata) {
-                                        if (metadata.hasOwnProperty(key)) {
+                                        if (metadata.hasOwnProperty(key) && key !== 'isMatched' && key !== 'matching_percentage') {
                                             let value = metadata[key];
                                             if (typeof value === 'number') {
                                                 value = value.toFixed(3); // Format numbers
@@ -587,7 +617,9 @@ class AdvancedImageComparisonAPI:
                     "method_used": alignment_method,
                     "device_used": str(self.device),
                     "sensitivity": sensitivity,
-                    "min_area": min_area
+                    "min_area": min_area,
+                    "matching_percentage": float(100 * (1 - np.mean(change_mask_aligned))),  # Convert to percentage
+                    "isMatched": float(100 * (1 - np.mean(change_mask_aligned))) == 100.0  # True if 100% match
                 }
                 
                 # Cache result and metadata
