@@ -227,83 +227,75 @@ class AdvancedImageComparisonAPI:
                     }
                     .container {
                         background-color: #ffffff;
-                        border-radius: 12px;
+                        border-radius: 16px;
                         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-                        padding: 30px;
-                        max-width: 800px;
+                        padding: 40px;
+                        max-width: 1200px;
                         width: 100%;
-                        text-align: center;
                     }
                     .button-primary {
                         background-color: #4f46e5;
                         color: white;
-                        padding: 12px 24px;
-                        border-radius: 8px;
+                        padding: 16px 32px;
+                        border-radius: 12px;
                         font-weight: 600;
-                        transition: background-color 0.3s ease;
+                        transition: all 0.3s ease;
                         cursor: pointer;
+                        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
                     }
                     .button-primary:hover {
                         background-color: #4338ca;
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
                     }
-                    .input-file {
-                        display: block;
-                        width: 100%;
-                        padding: 10px;
-                        border: 2px dashed #d1d5db;
-                        border-radius: 8px;
-                        text-align: center;
-                        cursor: pointer;
-                        background-color: #f9fafb;
-                        color: #4b5563;
-                        transition: border-color 0.3s ease;
+                    .button-primary:active {
+                        transform: translateY(0);
+                        box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
                     }
-                    .input-file:hover {
-                        border-color: #9ca3af;
+                    .input-file-placeholder {
+                        transition: all 0.3s ease;
                     }
-                    .file-info {
-                        margin-top: 8px;
-                        font-size: 0.875rem;
-                        color: #6b7280;
-                    }
-                    .file-size-warning {
-                        color: #f59e0b;
-                        font-weight: 500;
-                    }
-                    .file-size-error {
-                        color: #ef4444;
-                        font-weight: 500;
+                    .input-file-placeholder:hover {
+                        border-color: #4f46e5;
+                        background-color: #f8fafc;
                     }
                     .image-preview {
-                        max-width: 100%;
-                        height: auto;
-                        border-radius: 8px;
-                        border: 1px solid #e5e7eb;
-                        margin-top: 15px;
-                        display: block;
-                        margin-left: auto;
-                        margin-right: auto;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        transition: all 0.3s ease;
+                    }
+                    .image-preview:hover {
+                        transform: scale(1.01);
+                        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+                    }
+                    .result-box {
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        padding: 20px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                        transition: all 0.3s ease;
+                    }
+                    .result-box:hover {
+                        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.1);
                     }
                     .spinner {
-                        border: 4px solid rgba(0, 0, 0, 0.1);
+                        border: 4px solid rgba(79, 70, 229, 0.1);
                         border-left-color: #4f46e5;
                         border-radius: 50%;
-                        width: 30px;
-                        height: 30px;
+                        width: 24px;
+                        height: 24px;
                         animation: spin 1s linear infinite;
-                        margin: 20px auto;
                     }
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
-                    /* Add custom popup styles */
                     .custom-popup {
                         position: fixed;
                         top: 20px;
                         right: 20px;
-                        padding: 15px 25px;
-                        border-radius: 8px;
+                        padding: 16px 24px;
+                        border-radius: 12px;
                         color: white;
                         font-weight: 500;
                         z-index: 1000;
@@ -328,18 +320,6 @@ class AdvancedImageComparisonAPI:
                         background-color: #10b981;
                         border-left: 4px solid #059669;
                     }
-                    .custom-popup .close-btn {
-                        position: absolute;
-                        right: 10px;
-                        top: 50%;
-                        transform: translateY(-50%);
-                        background: none;
-                        border: none;
-                        color: white;
-                        cursor: pointer;
-                        font-size: 18px;
-                        padding: 0 5px;
-                    }
                 </style>
             </head>
             <body>
@@ -347,65 +327,73 @@ class AdvancedImageComparisonAPI:
                 <div id="popupContainer"></div>
                 
                 <div class="container">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-6">Advanced AI Image Comparison Tool</h1>
-                    <p class="text-gray-600 mb-8">Upload two images (reference and comparison) to detect and highlight differences.</p>
+                    <h1 class="text-4xl font-bold text-gray-800 mb-6">Advanced AI Image Comparison Tool</h1>
+                    <p class="text-gray-600 mb-8">Upload two images to detect and highlight differences using multiple AI methods.</p>
 
                     <form id="uploadForm" class="space-y-6">
-                        <div>
-                            <label for="image1" class="block text-lg font-medium text-gray-700 mb-2">Reference Image (Image A):</label>
-                            <input type="file" id="image1" name="image1" accept="image/*" required class="input-file">
-                            <div id="fileInfo1" class="file-info"></div>
-                            <img id="preview1" class="image-preview hidden" src="#" alt="Image A Preview">
-                        </div>
-                        <div>
-                            <label for="image2" class="block text-lg font-medium text-gray-700 mb-2">Comparison Image (Image B):</label>
-                            <input type="file" id="image2" name="image2" accept="image/*" required class="input-file">
-                            <div id="fileInfo2" class="file-info"></div>
-                            <img id="preview2" class="image-preview hidden" src="#" alt="Image B Preview">
-                        </div>
-                        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                            <div class="flex-1">
-                                <label for="sensitivity" class="block text-lg font-medium text-gray-700 mb-2">Sensitivity (0.0 - 1.0):</label>
-                                <input type="range" id="sensitivity" name="sensitivity" value="0.5" min="0" max="1" step="0.01" 
-                                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                    oninput="document.getElementById('sensitivityValue').textContent = this.value">
-                                <div class="text-sm text-gray-600 text-center" id="sensitivityValue">0.5</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="upload-box">
+                                <label for="image1" class="block text-lg font-medium text-gray-700 mb-2">Reference Image (Image A):</label>
+                                <div class="relative">
+                                    <input type="file" id="image1" name="image1" accept="image/*" required 
+                                        class="input-file opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+                                    <div class="input-file-placeholder border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <p class="mt-1 text-sm text-gray-600">Click to upload or drag and drop</p>
+                                    </div>
+                                </div>
+                                <div id="fileInfo1" class="file-info mt-2"></div>
+                                <img id="preview1" class="image-preview hidden mt-4" src="#" alt="Image A Preview">
                             </div>
-                            <div class="flex-1">
-                                <label for="min_area" class="block text-lg font-medium text-gray-700 mb-2">Min Change Area (pixels):</label>
-                                <input type="number" id="min_area" name="min_area" value="100" min="0" step="1" 
-                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <div class="flex-1">
-                                <label for="alignment_method" class="block text-lg font-medium text-gray-700 mb-2">Alignment Method:</label>
-                                <select id="alignment_method" name="alignment_method" 
-                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="superglue">SuperGlue (Advanced)</option>
-                                    <option value="basic">Basic (ORB/SIFT)</option>
-                                </select>
-                            </div>
-                            <div class="flex-1">
-                                <label for="detect_method" class="block text-lg font-medium text-gray-700 mb-2">Detection Method:</label>
-                                <select id="detect_method" name="detect_method" 
-                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="Advance">Advanced (ChangeFormer)</option>
-                                    <option value="SSIM">SSIM (Structural Similarity)</option>
-                                </select>
+
+                            <div class="upload-box">
+                                <label for="image2" class="block text-lg font-medium text-gray-700 mb-2">Comparison Image (Image B):</label>
+                                <div class="relative">
+                                    <input type="file" id="image2" name="image2" accept="image/*" required 
+                                        class="input-file opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+                                    <div class="input-file-placeholder border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <p class="mt-1 text-sm text-gray-600">Click to upload or drag and drop</p>
+                                    </div>
+                                </div>
+                                <div id="fileInfo2" class="file-info mt-2"></div>
+                                <img id="preview2" class="image-preview hidden mt-4" src="#" alt="Image B Preview">
                             </div>
                         </div>
-                        <button type="submit" class="button-primary w-full flex items-center justify-center mt-6">
+
+                        <button type="submit" class="button-primary w-full flex items-center justify-center mt-6 py-4 text-lg">
                             <span id="buttonText">Compare Images</span>
                             <div id="spinner" class="spinner hidden ml-3"></div>
                         </button>
                     </form>
 
                     <div id="resultContainer" class="mt-8 hidden">
-                        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Comparison Result:</h2>
-                        <div class="mb-4 p-4 rounded-lg" id="matchStatus">
-                            <!-- Match status will be inserted here -->
+                        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Comparison Results:</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Advanced Detection Result -->
+                            <div class="result-box">
+                                <h3 class="text-xl font-semibold text-gray-700 mb-4">Advanced AI Detection (ChangeFormer)</h3>
+                                <div class="mb-4 p-4 rounded-lg bg-gray-50" id="matchStatusAdvanced">
+                                    <!-- Match status will be inserted here -->
+                                </div>
+                                <img id="resultImageAdvanced" class="image-preview w-full rounded-lg shadow-lg" src="#" alt="Advanced Detection Result">
+                                <div id="metadataAdvanced" class="mt-4 text-left text-gray-700 text-sm"></div>
+                            </div>
+
+                            <!-- SSIM Detection Result -->
+                            <div class="result-box">
+                                <h3 class="text-xl font-semibold text-gray-700 mb-4">SSIM Detection</h3>
+                                <div class="mb-4 p-4 rounded-lg bg-gray-50" id="matchStatusSSIM">
+                                    <!-- Match status will be inserted here -->
+                                </div>
+                                <img id="resultImageSSIM" class="image-preview w-full rounded-lg shadow-lg" src="#" alt="SSIM Detection Result">
+                                <div id="metadataSSIM" class="mt-4 text-left text-gray-700 text-sm"></div>
+                            </div>
                         </div>
-                        <img id="resultImage" class="image-preview" src="#" alt="Comparison Result">
-                        <div id="metadata" class="mt-4 text-left text-gray-700 text-sm"></div>
                     </div>
 
                     <div id="errorMessage" class="mt-4 text-red-600 font-medium hidden"></div>
@@ -490,10 +478,6 @@ class AdvancedImageComparisonAPI:
 
                         const image1File = document.getElementById('image1').files[0];
                         const image2File = document.getElementById('image2').files[0];
-                        const sensitivity = document.getElementById('sensitivity').value;
-                        const minArea = document.getElementById('min_area').value;
-                        const alignmentMethod = document.getElementById('alignment_method').value;
-                        const detectMethod = document.getElementById('detect_method').value;
 
                         // Validate files before upload
                         if (!image1File || !image2File) {
@@ -519,15 +503,10 @@ class AdvancedImageComparisonAPI:
                         }
 
                         const resultContainer = document.getElementById('resultContainer');
-                        const resultImage = document.getElementById('resultImage');
-                        const metadataDiv = document.getElementById('metadata');
-                        const errorMessage = document.getElementById('errorMessage');
                         const buttonText = document.getElementById('buttonText');
                         const spinner = document.getElementById('spinner');
 
                         resultContainer.classList.add('hidden');
-                        errorMessage.classList.add('hidden');
-                        metadataDiv.innerHTML = '';
                         buttonText.textContent = 'Processing...';
                         spinner.classList.remove('hidden');
                         document.querySelector('button[type="submit"]').disabled = true;
@@ -535,76 +514,56 @@ class AdvancedImageComparisonAPI:
                         const formData = new FormData();
                         formData.append('reference_image', image1File);
                         formData.append('comparison_image', image2File);
-                        formData.append('sensitivity', sensitivity);
-                        formData.append('min_area', minArea);
-                        formData.append('alignment_method', alignmentMethod);
-                        formData.append('detect_method', detectMethod);
+                        formData.append('sensitivity', '0.5');
+                        formData.append('min_area', '100');
+                        formData.append('alignment_method', 'superglue');
+                        formData.append('detect_method', 'Advance');
 
                         try {
-                            const response = await fetch('/compare', {
+                            // Get Advanced detection result
+                            const responseAdvanced = await fetch('/compare', {
                                 method: 'POST',
                                 body: formData,
                             });
 
-                            if (!response.ok) {
-                                const errorData = await response.json();
+                            if (!responseAdvanced.ok) {
+                                const errorData = await responseAdvanced.json();
                                 throw new Error(errorData.detail || 'An error occurred during comparison.');
                             }
 
-                            const blob = await response.blob();
-                            const imageUrl = URL.createObjectURL(blob);
-                            resultImage.src = imageUrl;
+                            const blobAdvanced = await responseAdvanced.blob();
+                            const imageUrlAdvanced = URL.createObjectURL(blobAdvanced);
+                            document.getElementById('resultImageAdvanced').src = imageUrlAdvanced;
+
+                            // Get SSIM detection result
+                            formData.set('detect_method', 'SSIM');
+                            const responseSSIM = await fetch('/compare', {
+                                method: 'POST',
+                                body: formData,
+                            });
+
+                            if (!responseSSIM.ok) {
+                                const errorData = await responseSSIM.json();
+                                throw new Error(errorData.detail || 'An error occurred during SSIM comparison.');
+                            }
+
+                            const blobSSIM = await responseSSIM.blob();
+                            const imageUrlSSIM = URL.createObjectURL(blobSSIM);
+                            document.getElementById('resultImageSSIM').src = imageUrlSSIM;
+
                             resultContainer.classList.remove('hidden');
 
-                            // Extract metadata from headers
-                            const metadataHeader = response.headers.get('X-Metadata');
-                            if (metadataHeader) {
-                                try {
-                                    const metadata = JSON.parse(metadataHeader);
-                                    let metadataHtml = '<strong>Comparison Details:</strong><br>';
-                                    
-                                    // Add match status with beautiful styling
-                                    const matchStatus = document.getElementById('matchStatus');
-                                    const isMatched = metadata.isMatched;
-                                    const matchPercentage = metadata.matching_percentage.toFixed(2);
-                                    
-                                    matchStatus.innerHTML = `
-                                        <div class="flex items-center justify-center space-x-2">
-                                            <div class="text-2xl font-bold ${isMatched ? 'text-green-600' : 'text-red-600'}">
-                                                ${isMatched ? '✓' : '✗'}
-                                            </div>
-                                            <div class="text-xl ${isMatched ? 'text-green-600' : 'text-red-600'}">
-                                                ${isMatched ? 'Images Match!' : 'Images Do Not Match'}
-                                            </div>
-                                            <div class="text-lg text-gray-600">
-                                                (${matchPercentage}% similarity)
-                                            </div>
-                                        </div>
-                                    `;
-                                    
-                                    // Show success popup
-                                    showPopup(`Comparison completed successfully! ${matchPercentage}% similarity.`, 'success');
-                                    
-                                    // Add other metadata
-                                    for (const key in metadata) {
-                                        if (metadata.hasOwnProperty(key) && key !== 'isMatched' && key !== 'matching_percentage') {
-                                            let value = metadata[key];
-                                            if (typeof value === 'number') {
-                                                value = value.toFixed(3); // Format numbers
-                                            } else if (typeof value === 'object' && value !== null) {
-                                                value = JSON.stringify(value, null, 2); // Pretty print objects
-                                            }
-                                            metadataHtml += `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}<br>`;
-                                        }
-                                    }
-                                    metadataDiv.innerHTML = metadataHtml;
-                                } catch (e) {
-                                    console.error("Failed to parse metadata header:", e);
-                                    metadataDiv.textContent = "Metadata available but could not be parsed.";
-                                }
-                            } else {
-                                metadataDiv.textContent = "No metadata available.";
-                            }
+                            // Process metadata for both results
+                            const metadataAdvanced = JSON.parse(responseAdvanced.headers.get('X-Metadata'));
+                            const metadataSSIM = JSON.parse(responseSSIM.headers.get('X-Metadata'));
+
+                            // Update Advanced detection metadata
+                            updateResultMetadata('Advanced', metadataAdvanced);
+                            // Update SSIM detection metadata
+                            updateResultMetadata('SSIM', metadataSSIM);
+
+                            // Show success popup
+                            showPopup('Comparison completed successfully!', 'success');
 
                         } catch (error) {
                             showPopup('Error: ' + error.message, 'error');
@@ -614,6 +573,73 @@ class AdvancedImageComparisonAPI:
                             document.querySelector('button[type="submit"]').disabled = false;
                         }
                     });
+
+                    function updateResultMetadata(method, metadata) {
+                        const matchStatus = document.getElementById(`matchStatus${method}`);
+                        const metadataDiv = document.getElementById(`metadata${method}`);
+                        
+                        const isMatched = metadata.isMatched;
+                        const matchPercentage = metadata.matching_percentage.toFixed(2);
+                        
+                        matchStatus.innerHTML = `
+                            <div class="flex items-center justify-center space-x-2">
+                                <div class="text-2xl font-bold ${isMatched ? 'text-green-600' : 'text-red-600'}">
+                                    ${isMatched ? '✓' : '✗'}
+                                </div>
+                                <div class="text-xl ${isMatched ? 'text-green-600' : 'text-red-600'}">
+                                    ${isMatched ? 'Images Match!' : 'Images Do Not Match'}
+                                </div>
+                                <div class="text-lg text-gray-600">
+                                    (${matchPercentage}% similarity)
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Create table for metadata
+                        let metadataHtml = `
+                            <div class="mt-4">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-3">Comparison Details</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-sm">
+                                        <tbody class="divide-y divide-gray-200">
+                                            ${Object.entries(metadata)
+                                                .filter(([key]) => key !== 'isMatched' && key !== 'matching_percentage')
+                                                .map(([key, value]) => {
+                                                    let formattedValue = value;
+                                                    if (typeof value === 'number') {
+                                                        formattedValue = value.toFixed(3);
+                                                    } else if (typeof value === 'object' && value !== null) {
+                                                        formattedValue = `
+                                                            <div class="space-y-1">
+                                                                ${Object.entries(value)
+                                                                    .map(([k, v]) => `
+                                                                        <div class="flex justify-between">
+                                                                            <span class="text-gray-600">${k.replace(/_/g, ' ')}:</span>
+                                                                            <span class="font-medium">${typeof v === 'number' ? v.toFixed(3) : v}</span>
+                                                                        </div>
+                                                                    `).join('')}
+                                                            </div>
+                                                        `;
+                                                    }
+                                                    return `
+                                                        <tr class="hover:bg-gray-50">
+                                                            <td class="px-4 py-3">
+                                                                <div class="flex justify-between items-start">
+                                                                    <span class="text-gray-600 font-medium">${key.replace(/_/g, ' ')}:</span>
+                                                                    <span class="ml-4 text-right">${formattedValue}</span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                        
+                        metadataDiv.innerHTML = metadataHtml;
+                    }
                 </script>
             </body>
             </html>
